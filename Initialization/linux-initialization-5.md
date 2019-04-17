@@ -43,7 +43,7 @@ _set_gate(n, GATE_INTERRUPT, addr, 0, ist, __KERNEL_CS);
 
 as `set_intr_gate` does this. But `set_intr_gate` calls `_set_gate` with [dpl](http://en.wikipedia.org/wiki/Privilege_level) - 0, and ist - 0, but `set_intr_gate_ist` and `set_system_intr_gate_ist` sets `ist` as `DEBUG_STACK` and `set_system_intr_gate_ist` sets `dpl` as `0x3` which is the lowest privilege. When an interrupt occurs and the hardware loads such a descriptor, then hardware automatically sets the new stack pointer based on the IST value, then invokes the interrupt handler. All of the special kernel stacks will be set in the `cpu_init` function (we will see it later).
 
-As `#DB` and `#BP` gates written to the `idt_descr`, we reload `IDT` table with `load_idt` which just calss `ldtr` instruction. Now let's look on interrupt handlers and will try to understand how they works. Of course, I can't cover all interrupt handlers in this book and I do not see the point in this. It is very interesting to delve in the linux kernel source code, so we will see how `debug` handler implemented in this part, and understand how other interrupt handlers are implemented will be your task.
+As `#DB` and `#BP` gates written to the `idt_descr`, we reload `IDT` table with `load_idt` which just call `ldtr` instruction. Now let's look on interrupt handlers and will try to understand how they works. Of course, I can't cover all interrupt handlers in this book and I do not see the point in this. It is very interesting to delve in the linux kernel source code, so we will see how `debug` handler implemented in this part, and understand how other interrupt handlers are implemented will be your task.
 
 #DB handler
 --------------------------------------------------------------------------------
@@ -165,7 +165,7 @@ The next step is initialization of early `ioremap`. In general there are two way
 
 We already saw first method (`outb/inb` instructions) in the part about linux kernel booting [process](https://0xax.gitbooks.io/linux-insides/content/Booting/linux-bootstrap-3.html). The second method is to map I/O physical addresses to virtual addresses. When a physical address is accessed by the CPU, it may refer to a portion of physical RAM which can be mapped on memory of the I/O device. So `ioremap` used to map device memory into kernel address space.
 
-As i wrote above next function is the `early_ioremap_init` which re-maps I/O memory to kernel address space so it can access it. We need to initialize early ioremap for early initialization code which needs to temporarily map I/O or memory regions before the normal mapping functions like `ioremap` are available. Implementation of this function is in the [arch/x86/mm/ioremap.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/ioremap.c). At the start of the `early_ioremap_init` we can see definition of the `pmd` point with `pmd_t` type (which presents page middle directory entry `typedef struct { pmdval_t pmd; } pmd_t;` where `pmdval_t` is `unsigned long`) and make a check that `fixmap` aligned in a correct way:
+As i wrote above next function is the `early_ioremap_init` which re-maps I/O memory to kernel address space so it can access it. We need to initialize early ioremap for early initialization code which needs to temporarily map I/O or memory regions before the normal mapping functions like `ioremap` are available. Implementation of this function is in the [arch/x86/mm/ioremap.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/ioremap.c). At the start of the `early_ioremap_init` we can see definition of the `pmd` pointer with `pmd_t` type (which presents page middle directory entry `typedef struct { pmdval_t pmd; } pmd_t;` where `pmdval_t` is `unsigned long`) and make a check that `fixmap` aligned in a correct way:
 
 ```C
 pmd_t *pmd;
@@ -354,7 +354,7 @@ struct x86_init_ops x86_init __initdata = {
 }
 ```
 
-As we can see here `memry_setup` field is `default_machine_specific_memory_setup` where we get the number of the [e820](http://en.wikipedia.org/wiki/E820) entries which we collected in the [boot time](https://0xax.gitbooks.io/linux-insides/content/Booting/linux-bootstrap-2.html), sanitize the BIOS e820 map and fill `e820map` structure with the memory regions. As all regions are collected, print of all regions with printk. You can find this print if you execute `dmesg` command and you can see something like this:
+As we can see here `memory_setup` field is `default_machine_specific_memory_setup` where we get the number of the [e820](http://en.wikipedia.org/wiki/E820) entries which we collected in the [boot time](https://0xax.gitbooks.io/linux-insides/content/Booting/linux-bootstrap-2.html), sanitize the BIOS e820 map and fill `e820map` structure with the memory regions. As all regions are collected, print of all regions with printk. You can find this print if you execute `dmesg` command and you can see something like this:
 
 ```
 [    0.000000] e820: BIOS-provided physical RAM map:

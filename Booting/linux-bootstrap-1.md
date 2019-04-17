@@ -28,7 +28,7 @@ The Magical Power Button, What happens next?
 
 Although this is a series of posts about the Linux kernel, we will not be starting directly from the kernel code - at least not, in this paragraph. As soon as you press the magical power button on your laptop or desktop computer, it starts working. The motherboard sends a signal to the [power supply](https://en.wikipedia.org/wiki/Power_supply) device. After receiving the signal, the power supply provides the proper amount of electricity to the computer. Once the motherboard receives the [power good signal](https://en.wikipedia.org/wiki/Power_good_signal), it tries to start the CPU. The CPU resets all leftover data in its registers and sets up predefined values for each of them.
 
-The [80386](https://en.wikipedia.org/wiki/Intel_80386) CPU and later define the following predefined data in CPU registers after the computer resets:
+The [80386](https://en.wikipedia.org/wiki/Intel_80386) CPU and later CPUs define the following predefined data in CPU registers after the computer resets:
 
 ```
 IP          0xfff0
@@ -73,7 +73,7 @@ The starting address is formed by adding the base address to the value in the EI
 '0xfffffff0'
 ```
 
-We get `0xfffffff0`, which is 16 bytes below 4GB. This point is called the [Reset vector](https://en.wikipedia.org/wiki/Reset_vector). This is the memory location at which the CPU expects to find the first instruction to execute after reset. It contains a [jump](https://en.wikipedia.org/wiki/JMP_%28x86_instruction%29) (`jmp`) instruction that usually points to the BIOS entry point. For example, if we look in the [coreboot](https://www.coreboot.org/) source code (`src/cpu/x86/16bit/reset16.inc`), we will see:
+We get `0xfffffff0`, which is 16 bytes below 4GB. This point is called the [reset vector](https://en.wikipedia.org/wiki/Reset_vector). This is the memory location at which the CPU expects to find the first instruction to execute after reset. It contains a [jump](https://en.wikipedia.org/wiki/JMP_%28x86_instruction%29) (`jmp`) instruction that usually points to the BIOS entry point. For example, if we look in the [coreboot](https://www.coreboot.org/) source code (`src/cpu/x86/16bit/reset16.inc`), we will see:
 
 ```assembly
     .section ".reset", "ax", %progbits
@@ -329,11 +329,11 @@ state.gs = state.fs = state.es = state.ds = state.ss = segment;
 state.cs = segment + 0x20;
 ```
 
-In my case, the kernel is loaded at `0x10000` address. This means that segment registers will have the following values after kernel setup starts:
+In my case, the kernel is loaded at `0x10000` physical address. This means that segment registers will have the following values after kernel setup starts:
 
 ```
-gs = fs = es = ds = ss = 0x10000
-cs = 0x10200
+gs = fs = es = ds = ss = 0x1000
+cs = 0x1020
 ```
 
 After the jump to `start_of_setup`, the kernel needs to do the following:
@@ -356,7 +356,7 @@ First of all, the kernel ensures that the `ds` and `es` segment registers point 
     cld
 ```
 
-As I wrote earlier, `grub2` loads kernel setup code at address `0x10000` by default and `cs` at `0x10200` because execution doesn't start from the start of file, but from the jump here:
+As I wrote earlier, `grub2` loads kernel setup code at address `0x10000` by default and `cs` at `0x1020` because execution doesn't start from the start of file, but from the jump here:
 
 ```assembly
 _start:
@@ -364,7 +364,7 @@ _start:
     .byte start_of_setup-1f
 ```
 
-which is at a `512` byte offset from [4d 5a](https://github.com/torvalds/linux/blob/v4.16/arch/x86/boot/header.S#L46). We also need to align `cs` from `0x10200` to `0x10000`, as well as all other segment registers. After that, we set up the stack:
+which is at a `512` byte offset from [4d 5a](https://github.com/torvalds/linux/blob/v4.16/arch/x86/boot/header.S#L46). We also need to align `cs` from `0x1020` to `0x1000`, as well as all other segment registers. After that, we set up the stack:
 
 ```assembly
     pushw   %ds
