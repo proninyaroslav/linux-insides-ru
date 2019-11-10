@@ -125,3 +125,5 @@ Thank you to all contributors:
 * [Blameying](https://github.com/Blameying)
 * [Junsoo Lee](https://github.com/junsooo)
 * [SeongJae Park](https://github.com/sjp38)
+* [Stefan20162016](https://github.com/stefan20162016)
+* [Marco Torsello](https://github.com/md1512)
