@@ -1,5 +1,5 @@
 # Cgroups
 
-This chapter describes `control groups` mechanism in the Linux kernel.
+Эта глава описывает механизм `контрольных групп` в ядре Linux.
 
-* [Introduction](linux-cgroups-1.md)
+* [Вступление](linux-cgroups-1.md)
