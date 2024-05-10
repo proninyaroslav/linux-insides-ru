@@ -1,38 +1,38 @@
-Notification Chains in Linux Kernel
+Цепочки уведомлений в Ядре Linux
 ================================================================================
 
-Introduction
+Вступление
 --------------------------------------------------------------------------------
 
-The Linux kernel is huge piece of [C](https://en.wikipedia.org/wiki/C_%28programming_language%29) code which consists from many different subsystems. Each subsystem has its own purpose which is independent of other subsystems. But often one subsystem wants to know something from other subsystem(s). There is special mechanism in the Linux kernel which allows to solve this problem partly. The name of this mechanism is - `notification chains` and its main purpose to provide a way for different subsystems to subscribe on asynchronous events from other subsystems. Note that this mechanism is only for communication inside kernel, but there are other mechanisms for communication between kernel and userspace.
+Ядро Linux - огромный кусок кода на языке программирования C, который состоит из множества различных подсистем. Каждая подсистема имеет свою собственную цель, независимую от других подсистем. Однако часто одна подсистема хочет узнать что-то из другой подсистемы (или подсистем). В ядре Linux существует специальный механизм, который позволяет частично решить эту проблему. Название этого механизма - `цепочки уведомлений`, и его главная цель - обеспечить способ для различных подсистем подписаться на асинхронные события от других подсистем. Обратите внимание, что этот механизм предназначен только для общения внутри ядра, но существуют и другие механизмы для общения между ядром и пользовательским пространством.
 
-Before we will consider `notification chains` [API](https://en.wikipedia.org/wiki/Application_programming_interface) and implementation of this API, let's look at `Notification chains` mechanism from theoretical side as we did it in other parts of this book. Everything which is related to `notification chains` mechanism is located in the [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) header file and [kernel/notifier.c](https://github.com/torvalds/linux/blob/master/kernel/notifier.c) source code file. So let's open them and start to dive.
+Прежде чем мы рассмотрим [API](https://en.wikipedia.org/wiki/Application_programming_interface) `цепочек уведомлений` и реализацию этого API, давайте посмотрим на механизм `цепочек уведомлений` с теоретической стороны, как мы делали это в других частях этой книги. Все, что связано с механизмом `цепочек уведомлений`, находится в заголовочном файле [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) и файле исходного кода [kernel/notifier.c](https://github.com/torvalds/linux/blob/master/kernel/notifier.c). Итак, давайте откроем их и начнем погружение.
 
-Notification Chains related data structures
+Структуры данных, связанные с цепочками уведомлений.
 --------------------------------------------------------------------------------
 
-Let's start to consider `notification chains` mechanism from related data structures. As I wrote above, main data structures should be located in the [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) header file, so the Linux kernel provides generic API which does not depend on certain architecture. In general, the `notification chains` mechanism represents a list (that's why it named `chains`) of [callback](https://en.wikipedia.org/wiki/Callback_%28computer_programming%29) functions which are will be executed when an event will be occurred.
+Давайте начнем рассматривать механизм `цепочек уведомлений` с помощью связанных структур данных. Как я указывал выше, основные структуры данных должны находиться в заголовочном файле [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h), поэтому ядро Linux предоставляет общедоступный API, который не зависит от определенной архитектуры. В общем, механизм `цепочек уведомлений` представляет собой список (поэтому он назван `цепочками`) функций [обратного вызова](https://en.wikipedia.org/wiki/Callback_%28computer_programming%29), которые будут выполнены, когда произойдет событие.
 
-All of these callback functions are represented as `notifier_fn_t` type in the Linux kernel:
+Все эти функции обратного вызова представлены как тип `notifier_fn_t` в ядре Linux:
 
 ```C
 typedef	int (*notifier_fn_t)(struct notifier_block *nb, unsigned long action, void *data);
 ```
 
-So we may see that it takes three following arguments:
+Итак, мы видим, что он принимает три следующих аргумента:
 
-* `nb` - is linked list of function pointers (will see it now);
-* `action` - is type of an event. A notification chain may support multiple events, so we need this parameter to distinguish an event from other events;
-* `data` - is storage for private information. Actually it allows to provide additional data information about an event.
+* `nb` - связанный список указателей на функции (сейчас мы его увидим);
+* `action` - тип события. Цепочка уведомлений может поддерживать несколько событий, поэтому этот параметр нужен нам, чтобы отличать событие от других событий;
+* `data` — хранилище приватной информации. Фактически это позволяет предоставить дополнительные данные о событии.
 
-Additionally we may see that `notifier_fn_t` returns an integer value. This integer value maybe one of:
+Кроме того, мы можем увидеть, что `notifier_fn_t` возвращает целочисленное значение. Это целочисленное значение может быть одним из:
 
-* `NOTIFY_DONE` - subscriber does not interested in notification;
-* `NOTIFY_OK` - notification was processed correctly;
-* `NOTIFY_BAD` - something went wrong;
-* `NOTIFY_STOP` - notification is done, but no further callbacks should be called for this event.
+* `NOTIFY_DONE` - подписчик не заинтересован в уведомлении;
+* `NOTIFY_OK` - уведомление обработано корректно;
+* `NOTIFY_BAD` — что-то пошло не так;
+* `NOTIFY_STOP` — уведомление выполнено, но для этого события дальнейшие обратные вызовы вызываться не должны.
 
-All of these results defined as macros in the [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) header file:
+Все эти результаты определены как макросы в заголовочном файле [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h):
 
 ```C
 #define NOTIFY_DONE		0x0000
@@ -41,17 +41,17 @@ All of these results defined as macros in the [include/linux/notifier.h](https:/
 #define NOTIFY_STOP		(NOTIFY_OK|NOTIFY_STOP_MASK)
 ```
 
-Where `NOTIFY_STOP_MASK` represented by the:
+где `NOTIFY_STOP_MASK` представлен как:
 
 ```C
 #define NOTIFY_STOP_MASK	0x8000
 ```
 
-macro and means that callbacks will not be called during next notifications.
+макрос и означает, что обратные вызовы не будут вызываться при следующих уведомлениях.
 
-Each part of the Linux kernel which wants to be notified on a certain event will should provide own `notifier_fn_t` callback function. Main role of the `notification chains` mechanism is to call certain callbacks when an asynchronous event occurred.
+Каждая часть ядра Linux, которая хочет получать уведомления об определенном событии, должна предоставить собственную функцию обратного вызова `notifier_fn_t`. Основная роль механизма `цепочек уведомлений` заключается в вызове определенных обратных вызовов при возникновении асинхронного события.
 
-The main building block of the `notification chains` mechanism is the `notifier_block` structure:
+Основным строительным блоком механизма `цепочек уведомлений` является структура `notifier_block`:
 
 ```C
 struct notifier_block {
@@ -60,25 +60,24 @@ struct notifier_block {
 	int priority;
 };
 ```
+который определен в файле [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h). Эта структура содержит указатель на функцию обратного вызова — `notifier_call`, ссылку на следующий обратный вызов уведомления и `приоритет` функции обратного вызова, поскольку функции с более высоким приоритетом выполняются первыми.
 
-which is defined in the [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) file. This struct contains pointer to callback function - `notifier_call`, link to the next notification callback and `priority` of a callback function as functions with higher priority are executed first.
+Ядро Linux предоставляет цепочки уведомлений четырех следующих типов:
 
-The Linux kernel provides notification chains of four following types:
+* Блокировка цепочек уведомлений;
+* Цепочки уведомлений SRCU;
+* Атомарные цепочки уведомлений;
+* Необработанные цепочки уведомлений.
 
-* Blocking notifier chains;
-* SRCU notifier chains;
-* Atomic notifier chains;
-* Raw notifier chains.
+Давайте рассмотрим все эти типы цепочек уведомлений по порядку:
 
-Let's consider all of these types of notification chains by order:
+В первом случае для `блокирующих цепочек уведомлений` обратные вызовы будут вызываться/выполняться в контексте процесса. Это означает, что вызовы в цепочке уведомлений могут быть заблокированы.
 
-In the first case for the `blocking notifier chains`, callbacks will be called/executed in process context. This means that the calls in a notification chain may be blocked.
+Вторые `цепочки уведомлений SRCU` представляют собой альтернативную форму `блокирующих цепочек уведомлений`. В первом случае блокировка цепочек уведомлений использует примитив синхронизации `rw_semaphore` для защиты звеньев цепочки. Цепочки уведомлений `SRCU` также выполняются в контексте процесса, но используют специальную форму механизма [RCU](https://en.wikipedia.org/wiki/Read-copy-update), который можно блокировать на критической стороне чтения. раздел.
 
-The second `SRCU notifier chains` represent alternative form of `blocking notifier chains`. In the first case, blocking notifier chains uses `rw_semaphore` synchronization primitive to protect chain links. `SRCU` notifier chains run in process context too, but uses special form of [RCU](https://en.wikipedia.org/wiki/Read-copy-update) mechanism which is permissible to block in an read-side critical section.
+В третьем случае `атомарные цепочки уведомлений` выполняются в прерывании или атомарном контексте и защищены [spinlock](https://github.com/proninyaroslav/linux-insides-ru/blob/master/SyncPrim/linux-sync-1.md) примитив синхронизации. Последние `необработанные цепочки уведомлений` предоставляют особый тип цепочек уведомлений без каких-либо ограничений блокировки обратных вызовов. Это означает, что защита ложится на плечи вызывающей стороны. Это очень полезно, когда мы хотим защитить нашу цепь с помощью специального запорного механизма.
 
-In the third case for the `atomic notifier chains` runs in interrupt or atomic context and protected by [spinlock](https://0xax.gitbooks.io/linux-insides/content/SyncPrim/linux-sync-1.html) synchronization primitive. The last `raw notifier chains` provides special type of notifier chains without any locking restrictions on callbacks. This means that protection rests on the shoulders of caller side. It is very useful when we want to protect our chain with very specific locking mechanism.
-
-If we will look at the implementation of the `notifier_block` structure, we will see that it contains pointer to the `next` element from a notification chain list, but we have no head. Actually a head of such list is in separate structure depends on type of a notification chain. For example for the `blocking notifier chains`:
+Если мы посмотрим на реализацию структуры `notifier_block`, то увидим, что она содержит указатель на `следующий` элемент из списка цепочки уведомлений, но у нас нет заголовка. На самом деле заголовок такого списка находится в отдельной структуре и зависит от типа цепочки уведомлений. Например, для `блокирующих цепочек уведомлений`:
 
 ```C
 struct blocking_notifier_head {
@@ -87,7 +86,7 @@ struct blocking_notifier_head {
 };
 ```
 
-or for `atomic notification chains`:
+или для `atomic notification chains`:
 
 ```C
 struct atomic_notifier_head {
@@ -96,20 +95,20 @@ struct atomic_notifier_head {
 };
 ```
 
-Now as we know a little about `notification chains` mechanism let's consider implementation of its API.
+Теперь, когда мы немного знаем о механизме `цепочек уведомлений`, давайте рассмотрим реализацию его API.
 
-Notification Chains
+Цепочки уведомлений
 --------------------------------------------------------------------------------
 
-Usually there are two sides in a publish/subscriber mechanisms. One side who wants to get notifications and other side(s) who generates these notifications. We will consider notification chains mechanism from both sides. We will consider `blocking notification chains` in this part, because of other types of notification chains are similar to it and differs mostly in protection mechanisms.
+Обычно в механизмах публикации/подписки есть две стороны. Одна сторона, которая хочет получать уведомления, и другая сторона (стороны), которая генерирует эти уведомления. Мы рассмотрим механизм цепочек уведомлений с обеих сторон. В этой части мы рассмотрим `блокировку цепочек уведомлений`, поскольку другие типы цепочек уведомлений аналогичны ей и отличаются в основном механизмами защиты.
 
-Before a notification producer is able to produce notification, first of all it should initialize head of a notification chain. For example let's consider notification chains related to kernel [loadable modules](https://en.wikipedia.org/wiki/Loadable_kernel_module). If we will look in the [kernel/module.c](https://github.com/torvalds/linux/blob/master/kernel/module.c) source code file, we will see following definition:
+Прежде чем производитель уведомлений сможет создать уведомление, прежде всего он должен инициализировать главу цепочки уведомлений. Например, давайте рассмотрим цепочки уведомлений, связанные с ядром [загружаемые модули] (https://en.wikipedia.org/wiki/Loadable_kernel_module). Если мы посмотрим файл исходного кода [kernel/module.c](https://github.com/torvalds/linux/blob/master/kernel/module.c), мы увидим следующее определение:
 
 ```C
 static BLOCKING_NOTIFIER_HEAD(module_notify_list);
 ```
 
-which defines head for loadable modules blocking notifier chain. The `BLOCKING_NOTIFIER_HEAD` macro is defined in the [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) header file and expands to the following code:
+который определяет заголовок для загружаемых модулей, блокирующих цепочку уведомлений. Макрос `BLOCKING_NOTIFIER_HEAD` определен в заголовочном файле [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) и расширяется до следующего: код:
 
 ```C
 #define BLOCKING_INIT_NOTIFIER_HEAD(name) do {	\
@@ -118,9 +117,9 @@ which defines head for loadable modules blocking notifier chain. The `BLOCKING_N
 	} while (0)
 ```
 
-So we may see that it takes name of a name of a head of a blocking notifier chain and initializes read/write [semaphore](https://0xax.gitbooks.io/linux-insides/content/SyncPrim/linux-sync-3.html) and set head to `NULL`. Besides the `BLOCKING_INIT_NOTIFIER_HEAD` macro, the Linux kernel additionally provides `ATOMIC_INIT_NOTIFIER_HEAD`, `RAW_INIT_NOTIFIER_HEAD` macros and `srcu_init_notifier` function for initialization atomic and other types of notification chains.
+Итак, мы можем видеть, что он берет имя или имя главы цепочки блокирующих уведомлений и инициализирует чтение/запись [семафор] (https://github.com/proninyaroslav/linux-insides-ru/blob/master/SyncPrim/linux-sync-3.md) и установите для заголовка значение `NULL`. Помимо макроса `BLOCKING_INIT_NOTIFIER_HEAD`, ядро Linux дополнительно предоставляет макросы `ATOMIC_INIT_NOTIFIER_HEAD`, `RAW_INIT_NOTIFIER_HEAD` и функцию `srcu_init_notifier` для инициализации атомарных и других типов цепочек уведомлений.
 
-After initialization of a head of a notification chain, a subsystem which wants to receive notification from the given notification chain it should register with certain function which is depends on type of notification. If you will look in the [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h) header file, you will see following four function for this:
+После инициализации главы цепочки уведомлений подсистема, которая хочет получать уведомления из данной цепочки уведомлений, должна зарегистрироваться с определенной функцией, которая зависит от типа уведомления. Если вы посмотрите заголовочный файл [include/linux/notifier.h](https://github.com/torvalds/linux/blob/master/include/linux/notifier.h), вы увидите следующие четыре функции для этот:
 
 ```C
 extern int atomic_notifier_chain_register(struct atomic_notifier_head *nh,
@@ -136,12 +135,12 @@ extern int srcu_notifier_chain_register(struct srcu_notifier_head *nh,
 		struct notifier_block *nb);
 ```
 
-As I already wrote above, we will cover only blocking notification chains in the part, so let's consider implementation of the `blocking_notifier_chain_register` function. Implementation of this function is located in the [kernel/notifier.c](https://github.com/torvalds/linux/blob/master/kernel/notifier.c) source code file and as we may see the `blocking_notifier_chain_register` takes two parameters:
+Как я уже писал выше, в этой части мы рассмотрим только блокировку цепочек уведомлений, поэтому рассмотрим реализацию функции `blocking_notifier_chain_register`. Реализация этой функции находится в файле исходного кода [kernel/notifier.c](https://github.com/torvalds/linux/blob/master/kernel/notifier.c) и, как мы видим, `blocking_notifier_chain_register` принимает два параметра:
 
-* `nh` - head of a notification chain;
-* `nb` - notification descriptor.
+* `nh` — начало цепочки уведомлений;
+* `nb` — дескриптор уведомления.
 
-Now let's look at the implementation of the `blocking_notifier_chain_register` function:
+Теперь давайте посмотрим на реализацию функции `blocking_notifier_chain_register`:
 
 ```C
 int raw_notifier_chain_register(struct raw_notifier_head *nh,
@@ -151,7 +150,7 @@ int raw_notifier_chain_register(struct raw_notifier_head *nh,
 }
 ```
 
-As we may see it just returns result of the `notifier_chain_register` function from the same source code file and as we may understand this function does all job for us. Definition of the `notifier_chain_register` function looks:
+Как мы видим, она просто возвращает результат функции `notifier_chain_register` из того же файла исходного кода, и, как мы понимаем, эта функция делает всю работу за нас. Определение функции `notifier_chain_register` выглядит так:
 
 ```C
 int blocking_notifier_chain_register(struct blocking_notifier_head *nh,
@@ -169,7 +168,7 @@ int blocking_notifier_chain_register(struct blocking_notifier_head *nh,
 }
 ```
 
-As we may see implementation of the `blocking_notifier_chain_register` is pretty simple. First of all there is check which check current system state and if a system in rebooting state we just call the `notifier_chain_register`. In other way we do the same call of the `notifier_chain_register` but as you may see this call is protected with read/write semaphores. Now let's look at the implementation of the `notifier_chain_register` function:
+Как мы видим, реализация `blocking_notifier_chain_register` довольно проста. Прежде всего, есть проверка, которая проверяет текущее состояние системы, и если система находится в состоянии перезагрузки, мы просто вызываем `notifier_chain_register`. Другим способом мы делаем тот же вызов `notifier_chain_register`, но, как вы можете видеть, этот вызов защищен семафорами чтения/записи. Теперь давайте посмотрим на реализацию функции `notifier_chain_register`:
 
 ```C
 static int notifier_chain_register(struct notifier_block **nl,
@@ -186,7 +185,7 @@ static int notifier_chain_register(struct notifier_block **nl,
 }
 ```
 
-This function just inserts new `notifier_block` (given by a subsystem which wants to get notifications) to the notification chain list. Besides subscribing on an event, subscriber may unsubscribe from a certain events with the set of `unsubscribe` functions:
+Эта функция просто вставляет новый `notifier_block` (предоставленный подсистемой, которая хочет получать уведомления) в список цепочки уведомлений. Помимо подписки на событие, подписчик может отказаться от подписки на определенные события с помощью набора функций `отписки`:
 
 ```C
 extern int atomic_notifier_chain_unregister(struct atomic_notifier_head *nh,
@@ -202,7 +201,7 @@ extern int srcu_notifier_chain_unregister(struct srcu_notifier_head *nh,
 		struct notifier_block *nb);
 ```
 
-When a producer of notifications wants to notify subscribers about an event, the `*.notifier_call_chain` function will be called. As you already may guess each type of notification chains provides own function to produce notification:
+Когда производитель уведомлений хочет уведомить подписчиков о событии, будет вызвана функция `*.notifier_call_chain`. Как вы уже догадались, каждый тип цепочек уведомлений предоставляет собственную функцию для создания уведомлений:
 
 ```C
 extern int atomic_notifier_call_chain(struct atomic_notifier_head *nh,
@@ -218,7 +217,7 @@ extern int srcu_notifier_call_chain(struct srcu_notifier_head *nh,
 		unsigned long val, void *v);
 ```
 
-Let's consider implementation of the `blocking_notifier_call_chain` function. This function is defined in the [kernel/notifier.c](https://github.com/torvalds/linux/blob/master/kernel/notifier.c) source code file:
+Рассмотрим реализацию функции `blocking_notifier_call_chain`. Эта функция определена в файле исходного кода [kernel/notifier.c](https://github.com/torvalds/linux/blob/master/kernel/notifier.c):
 
 ```C
 int blocking_notifier_call_chain(struct blocking_notifier_head *nh,
@@ -228,13 +227,13 @@ int blocking_notifier_call_chain(struct blocking_notifier_head *nh,
 }
 ```
 
-and as we may see it just returns result of the `__blocking_notifier_call_chain` function. As we may see, the `blocking_notifer_call_chain` takes three parameters:
+и, как мы видим, он просто возвращает результат функции `__blocking_notifier_call_chain`. Как мы видим, `blocking_notifer_call_chain` принимает три параметра:
 
-* `nh` - head of notification chain list;
-* `val` - type of a notification;
-* `v` -  input parameter which may be used by handlers.
+* `nh` - заголовок списка цепочек уведомлений;
+* `val` - тип уведомления;
+* `v` — входной параметр, который может использоваться обработчиками.
 
-But the `__blocking_notifier_call_chain` function takes five parameters:
+А вот функция `__blocking_notifier_call_chain` принимает пять параметров:
 
 ```C
 int __blocking_notifier_call_chain(struct blocking_notifier_head *nh,
@@ -247,7 +246,7 @@ int __blocking_notifier_call_chain(struct blocking_notifier_head *nh,
 }
 ```
 
-Where `nr_to_call` and `nr_calls` are number of notifier functions to be called and number of sent notifications. As you may guess the main goal of the `__blocking_notifer_call_chain` function and other functions for other notification types is to call callback function when an event occurred. Implementation of the `__blocking_notifier_call_chain` is pretty simple, it just calls the `notifier_call_chain` function from the same source code file protected with read/write semaphore:
+Где `nr_to_call` и `nr_calls` — это количество вызываемых функций уведомления и количество отправленных уведомлений. Как вы можете догадаться, основная цель функции `__blocking_notifer_call_chain` и других функций для других типов уведомлений — вызвать функцию обратного вызова при возникновении события. Реализация `__blocking_notifier_call_chain` довольно проста: она просто вызывает функцию `notifier_call_chain` из того же файла исходного кода, защищенного семафором чтения/записи:
 
 ```C
 int __blocking_notifier_call_chain(struct blocking_notifier_head *nh,
@@ -266,7 +265,7 @@ int __blocking_notifier_call_chain(struct blocking_notifier_head *nh,
 }
 ```
 
-and returns its result. In this case all job is done by the `notifier_call_chain` function. Main purpose of this function informs registered notifiers about an asynchronous event:
+и возвращает свой результат. В этом случае вся работа выполняется функцией `notifier_call_chain`. Основная цель этой функции информирует зарегистрированных уведомителей об асинхронном событии:
 
 ```C
 static int notifier_call_chain(struct notifier_block **nl,
@@ -284,21 +283,21 @@ static int notifier_call_chain(struct notifier_block **nl,
 }
 ```
 
-That's all. In generall all looks pretty simple.
+Вот и все. В целом все выглядит довольно просто.
 
-Now let's consider on a simple example related to [loadable modules](https://en.wikipedia.org/wiki/Loadable_kernel_module). If we will look in the [kernel/module.c](https://github.com/torvalds/linux/blob/master/kernel/module.c). As we already saw in this part, there is:
+Теперь давайте рассмотрим простой пример, связанный с [загружаемыми модулями](https://en.wikipedia.org/wiki/Loadable_kernel_module). Если мы посмотрим в [kernel/module.c](https://github.com/torvalds/linux/blob/master/kernel/module.c). Как мы уже видели в этой части, есть:
 
 ```C
 static BLOCKING_NOTIFIER_HEAD(module_notify_list);
 ```
 
-definition of the `module_notify_list` in the [kernel/module.c](https://github.com/torvalds/linux/blob/master/kernel/module.c) source code file. This definition determines head of list of blocking notifier chains related to kernel modules. There are at least three following events:
+определение `module_notify_list` в файле исходного кода [kernel/module.c](https://github.com/torvalds/linux/blob/master/kernel/module.c). Это определение определяет заголовок списка цепочек блокирующих уведомлений, связанных с модулями ядра. Есть как минимум три следующих события:
 
 * MODULE_STATE_LIVE
 * MODULE_STATE_COMING
 * MODULE_STATE_GOING
 
-in which maybe interested some subsystems of the Linux kernel. For example tracing of kernel modules states. Instead of direct call of the `atomic_notifier_chain_register`, `blocking_notifier_chain_register` and etc., most notification chains come with a set of wrappers used to register to them. Registatrion on these modules events is going with the help of such wrapper:
+в чем возможно интересуются некоторые подсистемы ядра Linux. Например трассировка состояний модулей ядра. Вместо прямого вызова `atomic_notifier_chain_register`, `blocking_notifier_chain_register` и т. д. большинство цепочек уведомлений поставляются с набором оболочек, используемых для регистрации в них. Регистрация на событиях этих модулей происходит с помощью такой обертки:
 
 ```C
 int register_module_notifier(struct notifier_block *nb)
@@ -307,7 +306,7 @@ int register_module_notifier(struct notifier_block *nb)
 }
 ```
 
-If we will look in the [kernel/tracepoint.c](https://github.com/torvalds/linux/blob/master/kernel/tracepoint.c) source code file, we will see such registration during initialization of [tracepoints](https://www.kernel.org/doc/Documentation/trace/tracepoints.txt):
+Если мы посмотрим в файл исходного кода [kernel/tracepoint.c](https://github.com/torvalds/linux/blob/master/kernel/tracepoint.c), то увидим такую регистрацию во время инициализации [tracepoints](https://www.kernel.org/doc/Documentation/trace/tracepoints.txt):
 
 ```C
 static __init int init_tracepoints(void)
@@ -322,7 +321,7 @@ static __init int init_tracepoints(void)
 }
 ```
 
-Where `tracepoint_module_nb` provides callback function:
+Где `tracepoint_module_nb` предоставляет функцию обратного вызова:
 
 ```C
 static struct notifier_block tracepoint_module_nb = {
@@ -331,7 +330,7 @@ static struct notifier_block tracepoint_module_nb = {
 };
 ```
 
-When one of the `MODULE_STATE_LIVE`, `MODULE_STATE_COMING` or `MODULE_STATE_GOING` events occurred. For example the `MODULE_STATE_LIVE` the `MODULE_STATE_COMING` notifications will be sent during execution of the [init_module](http://man7.org/linux/man-pages/man2/init_module.2.html) [system call](https://0xax.gitbooks.io/linux-insides/content/SysCall/linux-syscall-1.html). Or for example `MODULE_STATE_GOING` will be sent during execution of the [delete_module](http://man7.org/linux/man-pages/man2/delete_module.2.html) `system call`:
+Когда произошло одно из событий `MODULE_STATE_LIVE`, `MODULE_STATE_COMING` или `MODULE_STATE_GOING`. Например, уведомления `MODULE_STATE_LIVE` и `MODULE_STATE_COMING` будут отправлены во время выполнения [init_module](http://man7.org/linux/man-pages/man2/init_module.2.html) [системного вызова](https://github.com/proninyaroslav/linux-insides-ru/blob/master/SysCall/linux-syscall-1.md). Или, например, `MODULE_STATE_GOING` будет отправлен во время выполнения `системного вызова` [delete_module](http://man7.org/linux/man-pages/man2/delete_module.2.html):
 
 ```C
 SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
@@ -348,22 +347,22 @@ SYSCALL_DEFINE2(delete_module, const char __user *, name_user,
 }
 ```
 
-Thus when one of these system call will be called from userspace, the Linux kernel will send certain notification depends on a system call and the `tracepoint_module_notify` callback function will be called.
+Таким образом, когда один из этих системных вызовов будет вызван из пользовательского пространства, ядро Linux отправит определенное уведомление в зависимости от системного вызова и будет вызвана функция обратного вызова `tracepoint_module_notify`.
 
-That's all.
+Вот и все.
 
-Links
+Ссылки
 --------------------------------------------------------------------------------
 
-* [C programming language](https://en.wikipedia.org/wiki/C_%28programming_language%29)
+* [Язык программирования С](https://en.wikipedia.org/wiki/C_%28programming_language%29)
 * [API](https://en.wikipedia.org/wiki/Application_programming_interface)
-* [callback](https://en.wikipedia.org/wiki/Callback_%28computer_programming%29)
+* [Функция обратного вызова](https://en.wikipedia.org/wiki/Callback_%28computer_programming%29)
 * [RCU](https://en.wikipedia.org/wiki/Read-copy-update)
-* [spinlock](https://0xax.gitbooks.io/linux-insides/content/SyncPrim/linux-sync-1.html)
-* [loadable modules](https://en.wikipedia.org/wiki/Loadable_kernel_module)
-* [semaphore](https://0xax.gitbooks.io/linux-insides/content/SyncPrim/linux-sync-3.html)
+* [spinlock](https://github.com/proninyaroslav/linux-insides-ru/blob/master/SyncPrim/linux-sync-1.md)
+* [Загружаемые модули](https://en.wikipedia.org/wiki/Loadable_kernel_module)
+* [semaphore](https://github.com/proninyaroslav/linux-insides-ru/blob/master/SyncPrim/linux-sync-3.md)
 * [tracepoints](https://www.kernel.org/doc/Documentation/trace/tracepoints.txt)
-* [system call](https://0xax.gitbooks.io/linux-insides/content/SysCall/linux-syscall-1.html)
-* [init_module system call](http://man7.org/linux/man-pages/man2/init_module.2.html)
+* [Системный вызов](https://github.com/proninyaroslav/linux-insides-ru/blob/master/SysCall/linux-syscall-1.md)
+* [Системный вызов init_module](http://man7.org/linux/man-pages/man2/init_module.2.html)
 * [delete_module](http://man7.org/linux/man-pages/man2/delete_module.2.html)
-* [previous part](https://0xax.gitbooks.io/linux-insides/content/Concepts/linux-cpu-3.html)
+* [Предыдущая часть](https://github.com/proninyaroslav/linux-insides-ru/blob/master/Concepts/linux-cpu-3.md)
