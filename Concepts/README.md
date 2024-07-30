@@ -1,8 +1,8 @@
-# Linux kernel concepts
+# Концепции ядра Linux
 
-This chapter describes various concepts which are used in the Linux kernel.
+В этой главе описываются различные концепции, используемые в ядре Linux.
 
-* [Per-CPU variables](linux-cpu-1.md)
-* [CPU masks](linux-cpu-2.md)
-* [The initcall mechanism](linux-cpu-3.md)
-* [Notification Chains](linux-cpu-4.md)
+* [Процессорные переменные](linux-cpu-1.md)
+* [Маски процессора](linux-cpu-2.md)
+* [Механизм initcall](linux-cpu-3.md)
+* [Цепочки уведомлений](linux-cpu-4.md)
