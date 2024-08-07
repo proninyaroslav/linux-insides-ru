@@ -16,11 +16,16 @@ Linux Inside на русском
 
 Если вам нравится `linux-insides-ru`, вы можете поддержать **автора перевода** следующими способами. Если у вас возникли проблемы с оплатой или вы хотите пожертвовать иным способом, свяжитесь со мной: `proninyaroslav@mail.ru`. Спасибо!
 
- - **Yandex Money**: `410011738561939`
- - **PayPal**: [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=EJUYSU8Q8E822)
- - **Amazon.com eGift Cards**: просто выберите сумму и введите e-mail `proninyaroslav@mail.ru` в gift card details https://www.amazon.com/gp/product/B004LLIKVU/
+ - **Bitcoin**: `12isaLkH8nZ4DkFguVFeYrGHqQi7EEgUrM `
+ - **USDT TRC20**: `TK79fzUYwRtmANuLjk1Zzhz3hjTaFQbxfg`
+ - **Monero**: `48j4Mo7J7t51EeBf35Lpdmehmi9chUwzSXxHrnjpRJ6fPQafPWvSCdFafw3rA5ZRWievfYEDToNso8VppbJf2RVH9cdZmHa`
+ - **Yandex Money (YooMoney)**: `410011738561939`
+ - **WebMoney**:
+     - **WMZ**: `Z335461926163`
+     - **WMR**: `R151579576467`
+ - **Amazon.com eGift Cards**: just choose your amount and type e-mail `proninyaroslav@mail.ru`
+in the gift card details https://smile.amazon.com/gp/product/B004LLIKVU/
  - **Liberapay**: [![liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/proninyaroslav/donate)
- - **Bitcoin**: `1Af9DgxtWvVp6bFiYQw2MeWtRzTXshRYpB`
 
 Так же вы можете поддержать **оригинального автора** следующими способами:
 
