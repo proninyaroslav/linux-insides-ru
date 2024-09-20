@@ -19,12 +19,11 @@ Linux Inside на русском
  - **Bitcoin**: `12isaLkH8nZ4DkFguVFeYrGHqQi7EEgUrM `
  - **USDT TRC20**: `TK79fzUYwRtmANuLjk1Zzhz3hjTaFQbxfg`
  - **Monero**: `48j4Mo7J7t51EeBf35Lpdmehmi9chUwzSXxHrnjpRJ6fPQafPWvSCdFafw3rA5ZRWievfYEDToNso8VppbJf2RVH9cdZmHa`
- - **Yandex Money (YooMoney)**: `410011738561939`
- - **WebMoney**:
-     - **WMZ**: `Z335461926163`
-     - **WMR**: `R151579576467`
+ - **YooMoney (ЮMoney)**: `410011738561939`
+ - **Patreon**: [patreon.com/YaroslavPronin](https://patreon.com/YaroslavPronin)
+ - **Boosty**: [boosty.to/yaroslavpronin/donate](https://boosty.to/yaroslavpronin/donate)
  - **Amazon.com eGift Cards**: just choose your amount and type e-mail `proninyaroslav@mail.ru`
-in the gift card details https://smile.amazon.com/gp/product/B004LLIKVU/
+in the gift card details [smile.amazon.com/gp/product/B004LLIKVU](https://smile.amazon.com/gp/product/B004LLIKVU)
  - **Liberapay**: [![liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/proninyaroslav/donate)
 
 Так же вы можете поддержать **оригинального автора** следующими способами:
